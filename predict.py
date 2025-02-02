@@ -21,14 +21,11 @@ def get_input_args():
 def load_checkpoint(filepath):
     checkpoint = torch.load(filepath, map_location='cpu')
 
-    # Load pretrained ResNet18 and modify the final layer
     model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
     
-    # Freeze feature extractor layers
     for param in model.parameters():
         param.requires_grad = False
 
-    # Modify classifier to match the saved model
     num_ftrs = model.fc.in_features
     model.fc = nn.Sequential(
         nn.Linear(num_ftrs, 512),
@@ -74,7 +71,6 @@ def predict(image_path, model, device, top_k=5):
     top_p = top_p.cpu().numpy().squeeze()
     top_class = top_class.cpu().numpy().squeeze()
     
-    # Map indices to class labels
     idx_to_class = {v: k for k, v in model.class_to_idx.items()}
     if top_k == 1:
         top_labels = [idx_to_class[top_class]]
@@ -91,7 +87,6 @@ def main():
     model = load_checkpoint(args.checkpoint)
     probs, classes = predict(args.image_path, model, device, args.top_k)
     
-    # If a category-to-name mapping file is provided, replace labels with actual names
     if args.category_names:
         with open(args.category_names, 'r') as f:
             cat_to_name = json.load(f)

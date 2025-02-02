@@ -24,12 +24,10 @@ def get_input_args():
     return parser.parse_args()
 
 def load_data(data_dir):
-    # Define directories for train, validation, and test sets
     train_dir = os.path.join(data_dir, 'train')
     valid_dir = os.path.join(data_dir, 'valid')
     test_dir  = os.path.join(data_dir, 'test')
     
-    # Define transforms for training with augmentation
     train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomRotation(30),
@@ -39,7 +37,6 @@ def load_data(data_dir):
                              [0.229, 0.224, 0.225])
     ])
     
-    # Define transforms for validation and testing (no augmentation)
     test_valid_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -48,15 +45,13 @@ def load_data(data_dir):
                              [0.229, 0.224, 0.225])
     ])
     
-    # Load datasets using ImageFolder
     train_dataset = datasets.ImageFolder(train_dir, transform=train_transforms)
     valid_dataset = datasets.ImageFolder(valid_dir, transform=test_valid_transforms)
     test_dataset  = datasets.ImageFolder(test_dir, transform=test_valid_transforms)
     
-    # Create DataLoaders with increased batch size, num_workers, and pin_memory
     train_loader = DataLoader(
         train_dataset,
-        batch_size=64,  # Increased batch size
+        batch_size=64,  
         shuffle=True,
         num_workers=4,
         pin_memory=True
@@ -83,13 +78,8 @@ def build_model(num_classes=102):
     Load a pretrained ResNet18 model and modify its fully connected layer.
     Assumes that the dataset has num_classes classes.
     """
-    # Load a pretrained ResNet18 model
     model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-    
-    # Get the number of input features for the final fc layer
     num_ftrs = model.fc.in_features
-    
-    # Replace the fc layer with a new classifier
     model.fc = nn.Sequential(
         nn.Linear(num_ftrs, 512),
         nn.ReLU(),
@@ -105,7 +95,6 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, device,
         model.train()
         running_loss = 0
         
-        # Using tqdm for a progress bar over training batches
         progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{epochs}', unit='batch')
         for images, labels in progress_bar:
             images, labels = images.to(device), labels.to(device)
@@ -119,7 +108,6 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, device,
             
             progress_bar.set_postfix({'Train Loss': f'{running_loss/((progress_bar.n or 1)):.3f}'})
         
-        # After each epoch, evaluate on the validation set
         model.eval()
         valid_loss = 0
         correct = 0
@@ -142,7 +130,7 @@ def train_model(model, train_loader, valid_loader, criterion, optimizer, device,
               f"Valid Loss: {epoch_valid_loss:.3f}, "
               f"Accuracy: {epoch_accuracy:.3f}")
         
-        model.train()  # Set back to training mode
+        model.train() 
     return model
 
 def save_checkpoint(model, train_dataset, epochs, save_dir):
@@ -160,19 +148,12 @@ def save_checkpoint(model, train_dataset, epochs, save_dir):
 
 def main():
     args = get_input_args()
-    
-    # Set device to GPU if available and requested
     device = torch.device("cuda" if args.gpu and torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    # Load the data
     train_loader, valid_loader, test_loader, train_dataset = load_data(args.data_dir)
-    
-    # Build the model (assume 102 classes; adjust if needed)
     model = build_model(num_classes=102)
     model = model.to(device)
-    
-    # Define loss and optimizer
     criterion = nn.NLLLoss()
     optimizer = optim.AdamW(model.fc.parameters(), lr=0.001, weight_decay=0.01)
     
@@ -182,7 +163,6 @@ def main():
     elapsed_time = time.time() - start_time
     print(f"Training completed in {elapsed_time//60:.0f} minutes {elapsed_time%60:.0f} seconds")
     
-    # Save the checkpoint
     save_checkpoint(model, train_dataset, args.epochs, args.save_dir)
 
 if __name__ == '__main__':
